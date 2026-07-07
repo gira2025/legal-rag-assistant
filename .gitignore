@@ -42,8 +42,6 @@ secrets/
 # ============================================
 data/raw/
 data/processed/
-data/chroma_db/
-.gitkeep
 *.db
 *.sqlite3
 *.log
