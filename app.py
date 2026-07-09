@@ -21,16 +21,36 @@ st.set_page_config(
 )
 
 
-# ==================== 初始化 ====================
+# ==================== 缓存初始化（避免每次交互都重新加载模型）====================
 @st.cache_resource
 def get_pipeline():
+    """缓存 RAG 管线和向量存储，模型只加载一次"""
     return RAGPipeline()
 
 
-def reload_count():
-    """重新读取向量库文档数"""
-    store = VectorStore()
-    return store.count()
+@st.cache_resource
+def get_store():
+    """缓存向量库连接"""
+    return VectorStore()
+
+
+def cached_count():
+    """从缓存 store 读取文档数，避免重复创建连接"""
+    return get_store().count()
+
+
+def cached_search(query, top_k):
+    """缓存检索结果，相同 query+top_k 不重复检索"""
+    pipeline = get_pipeline()
+    return pipeline.ask(query, top_k=top_k, verbose=False)
+
+
+# ==================== 初始化 session state ====================
+if "doc_count" not in st.session_state:
+    st.session_state.doc_count = cached_count()
+
+if "import_key" not in st.session_state:
+    st.session_state.import_key = 0
 
 
 # ==================== 侧边栏 ====================
@@ -40,9 +60,6 @@ with st.sidebar:
     st.markdown("---")
 
     # 知识库状态
-    if "doc_count" not in st.session_state:
-        st.session_state.doc_count = reload_count()
-
     st.metric("📚 索引法条数", f"{st.session_state.doc_count:,} 条")
     st.metric("🤖 LLM", Config.LLM_MODEL)
     st.metric("🔤 Embedding", Config.EMBEDDING_MODEL)
@@ -52,7 +69,7 @@ with st.sidebar:
     st.caption(f"法律库: lawtext/laws (2400+ 部法律)")
 
     st.markdown("---")
-    top_k = st.slider("检索法条数", 3, 10, Config.TOP_K)
+    top_k = st.slider("检索法条数", 3, 10, Config.TOP_K, key="top_k_slider")
 
     # ========== 导入文档 ==========
     st.markdown("---")
@@ -62,12 +79,13 @@ with st.sidebar:
         "上传 PDF / Word / TXT",
         type=["pdf", "docx", "doc", "txt", "md"],
         help="支持 PDF、Word、TXT 格式，导入后会自动加入知识库",
+        key=f"uploader_{st.session_state.import_key}",
     )
 
     if uploaded_file is not None:
-        with st.spinner(f"正在处理 {uploaded_file.name} ..."):
-            # 保存到临时文件
-            suffix = Path(uploaded_file.name).suffix
+        original_name = uploaded_file.name
+        with st.spinner(f"正在处理 {original_name} ..."):
+            suffix = Path(original_name).suffix
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=suffix
             ) as tmp:
@@ -75,19 +93,27 @@ with st.sidebar:
                 tmp_path = Path(tmp.name)
 
             try:
-                # 解析文档
                 docs = parse_file(tmp_path)
                 if docs:
-                    # 写入向量库
-                    store = VectorStore()
+                    # 修正元数据：用原始文件名替代临时文件名
+                    for doc in docs:
+                        doc.metadata["source_file"] = original_name
+                        doc.metadata["law_name"] = original_name
+                        doc.metadata["article"] = ""
+
+                    store = get_store()
                     store.add_documents(docs)
-                    st.session_state.doc_count = reload_count()
+
+                    # 更新计数，清除搜索缓存，重置上传组件
+                    st.session_state.doc_count = cached_count()
+                    st.session_state.import_key += 1
+                    get_pipeline.clear()
                     st.success(
-                        f"✅ 已导入 {uploaded_file.name}"
-                        f"（{len(docs)} 个文本块）"
+                        f"✅ 已导入 {original_name}（{len(docs)} 个文本块）"
                     )
+                    st.rerun()
                 else:
-                    st.error(f"❌ 未能从 {uploaded_file.name} 中提取内容")
+                    st.error(f"❌ 未能从 {original_name} 中提取内容")
             except Exception as e:
                 st.error(f"❌ 导入失败: {e}")
             finally:
@@ -111,21 +137,28 @@ question = st.text_input(
 )
 
 if st.button("🔍 查询", type="primary", disabled=not question):
-    pipeline = get_pipeline()
     with st.spinner("正在检索相关法条..."):
-        result = pipeline.ask(question, top_k=top_k, verbose=False)
+        result = cached_search(question, top_k)
+
+    sources = result["sources"]
+    actual_count = len(sources)
 
     # ==================== 检索结果 ====================
     st.markdown("---")
-    st.subheader("📚 检索到的相关法条")
+    if actual_count < top_k:
+        st.subheader(f"📚 检索到的相关法条（共 {actual_count} 条，少于请求的 {top_k} 条）")
+    else:
+        st.subheader(f"📚 检索到的相关法条（{actual_count} 条）")
 
-    cols = st.columns(min(len(result["sources"]), 3))
-    for i, src in enumerate(result["sources"]):
+    cols = st.columns(min(actual_count, 3))
+    for i, src in enumerate(sources):
         col = cols[i % 3]
         with col:
             with st.container(border=True):
-                st.markdown(f"**{src['law_name']}**")
-                st.markdown(f"*{src['article']}*")
+                label = src["law_name"] or src.get("source_file", "未知来源")
+                st.markdown(f"**{label}**")
+                if src["article"]:
+                    st.markdown(f"*{src['article']}*")
                 text = src["content"]
                 st.text_area(
                     "内容",
@@ -154,8 +187,13 @@ if st.button("🔍 查询", type="primary", disabled=not question):
     # ==================== 来源引用 ====================
     st.markdown("---")
     st.subheader("📖 参考来源")
-    for i, src in enumerate(result["sources"], 1):
-        st.markdown(f"**{i}. {src['law_name']}** {src['article']}")
+    for i, src in enumerate(sources, 1):
+        label = src["law_name"] or src.get("source_file", "未知来源")
+        article = src["article"]
+        if article:
+            st.markdown(f"**{i}. {label}** {article}")
+        else:
+            st.markdown(f"**{i}. {label}**")
 
 
 # ==================== 底部 ====================

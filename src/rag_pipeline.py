@@ -149,12 +149,18 @@ class RAGPipeline:
         sources = []
         for doc in docs:
             meta = doc.metadata
-            key = (meta.get("law_name", ""), meta.get("article", ""))
+            # 用内容前 100 字符做去重，避免同名空条款的导入文档被合并
+            key = (
+                meta.get("law_name", ""),
+                meta.get("article", ""),
+                doc.page_content[:100],
+            )
             if key not in seen:
                 seen.add(key)
                 sources.append({
                     "law_name": meta.get("law_name", ""),
                     "article": meta.get("article", ""),
+                    "source_file": meta.get("source_file", ""),
                     "content": doc.page_content,
                 })
         return sources
