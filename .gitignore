@@ -33,6 +33,8 @@ Thumbs.db
 # ============================================
 .env
 演示说明.md
+generate_report.py
+毕业设计报告.docx
 .env.local
 .env.*.local
 *.key
@@ -41,8 +43,6 @@ secrets/
 # ============================================
 # 数据文件（根据实际情况调整）
 # ============================================
-data/raw/
-data/processed/
 data/chroma_db/
 data/laws/
 data/custom/

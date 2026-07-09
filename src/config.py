@@ -20,8 +20,6 @@ class Config:
     # ==================== 路径 ====================
     PROJECT_ROOT = Path(__file__).resolve().parent.parent  # 项目根目录
     DATA_DIR = PROJECT_ROOT / "data"
-    RAW_DIR = DATA_DIR / "raw"               # 原始法律文档（用户拖入的 PDF/Word）
-    PROCESSED_DIR = DATA_DIR / "processed"   # 预处理后的文本
     LAWS_REPO_DIR = DATA_DIR / "laws"        # 法律库克隆到这里
     CUSTOM_DOCS_DIR = DATA_DIR / "custom"    # 用户自定义文档
     CHROMA_DB_DIR = DATA_DIR / "chroma_db"   # 向量数据库持久化目录
@@ -67,8 +65,7 @@ class Config:
     @classmethod
     def ensure_dirs(cls) -> None:
         """确保所有数据目录都存在（首次运行自动创建）"""
-        for d in [cls.DATA_DIR, cls.RAW_DIR, cls.PROCESSED_DIR,
-                  cls.CUSTOM_DOCS_DIR, cls.CHROMA_DB_DIR]:
+        for d in [cls.DATA_DIR, cls.CUSTOM_DOCS_DIR, cls.CHROMA_DB_DIR]:
             d.mkdir(parents=True, exist_ok=True)
 
     @classmethod
