@@ -52,6 +52,9 @@ if "doc_count" not in st.session_state:
 if "import_key" not in st.session_state:
     st.session_state.import_key = 0
 
+if "import_msg" not in st.session_state:
+    st.session_state.import_msg = None  # (type, text) e.g. ("success", "...")
+
 
 # ==================== 侧边栏 ====================
 with st.sidebar:
@@ -103,21 +106,42 @@ with st.sidebar:
 
                     store = get_store()
                     store.add_documents(docs)
-
-                    # 更新计数，清除搜索缓存，重置上传组件
                     st.session_state.doc_count = cached_count()
-                    st.session_state.import_key += 1
                     get_pipeline.clear()
-                    st.success(
-                        f"✅ 已导入 {original_name}（{len(docs)} 个文本块）"
+
+                    # 保存成功消息到 session_state，增加 key 重置上传组件
+                    st.session_state.import_msg = (
+                        "success",
+                        f"已导入 {original_name}（{len(docs)} 个文本块）",
                     )
+                    st.session_state.import_key += 1
                     st.rerun()
                 else:
-                    st.error(f"❌ 未能从 {original_name} 中提取内容")
+                    st.session_state.import_msg = (
+                        "error",
+                        f"未能从 {original_name} 中提取内容",
+                    )
+                    st.session_state.import_key += 1
+                    st.rerun()
             except Exception as e:
-                st.error(f"❌ 导入失败: {e}")
+                st.session_state.import_msg = (
+                    "error",
+                    f"导入失败: {e}",
+                )
+                st.session_state.import_key += 1
+                st.rerun()
             finally:
                 tmp_path.unlink(missing_ok=True)
+
+    # 显示上次导入的结果消息（rerun 后依然可见）
+    if st.session_state.import_msg is not None:
+        msg_type, msg_text = st.session_state.import_msg
+        if msg_type == "success":
+            st.success(f"✅ {msg_text}")
+        else:
+            st.error(f"❌ {msg_text}")
+        # 显示一次后清除，下次刷新不显示
+        st.session_state.import_msg = None
 
 
 # ==================== 主页面 ====================
