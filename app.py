@@ -62,8 +62,10 @@ with st.sidebar:
     st.subheader("法律 RAG 智能助手")
     st.markdown("---")
 
-    # 知识库状态
-    import_count = get_store().count_imported()
+    # 知识库状态（计数缓存在 session_state，避免每次刷新读硬盘）
+    if "import_count" not in st.session_state:
+        st.session_state.import_count = get_store().count_imported()
+    import_count = st.session_state.import_count
     builtin_count = st.session_state.doc_count - import_count
     st.metric("📚 索引法条数", f"{st.session_state.doc_count:,} 条")
     st.caption(f"  内置法律 {builtin_count:,} 条 | 导入文档 {import_count:,} 条")
@@ -119,6 +121,7 @@ with st.sidebar:
                     store = get_store()
                     store.add_documents(docs)
                     st.session_state.doc_count = cached_count()
+                    st.session_state.import_count = get_store().count_imported()
                     get_pipeline.clear()
 
                     # 保存成功消息到 session_state，增加 key 重置上传组件
@@ -162,6 +165,7 @@ with st.sidebar:
             if st.button("删除所有导入文档", type="secondary"):
                 deleted = get_store().delete_imported()
                 st.session_state.doc_count = cached_count()
+                st.session_state.import_count = 0
                 st.session_state.import_key += 1
                 get_pipeline.clear()
                 st.session_state.import_msg = (
