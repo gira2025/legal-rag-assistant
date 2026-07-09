@@ -45,14 +45,16 @@ class RAGPipeline:
     # 公开方法
     # ============================================================
 
-    def ask(self, question: str, top_k: int = None, verbose: bool = False) -> dict:
+    def ask(self, question: str, top_k: int = None, verbose: bool = False,
+            source_type: str = None) -> dict:
         """
         执行一次 RAG 问答。
 
         参数:
-            question: 用户问题
-            top_k:    检索多少条相关法条（默认用 Config.TOP_K）
-            verbose:  是否打印检索到的法条详情
+            question:    用户问题
+            top_k:       检索多少条相关法条（默认用 Config.TOP_K）
+            verbose:     是否打印检索到的法条详情
+            source_type: 可选 "builtin" / "imported"，限定来源
 
         返回:
             {
@@ -69,7 +71,9 @@ class RAGPipeline:
             }
 
         # 1. 检索
-        retrieved_docs = self._vector_store.search(question, top_k=top_k)
+        retrieved_docs = self._vector_store.search(
+            question, top_k=top_k, source_type=source_type,
+        )
 
         if verbose:
             print(f"\n[检索] 找到 {len(retrieved_docs)} 条相关法条:")

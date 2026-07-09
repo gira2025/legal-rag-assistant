@@ -95,14 +95,19 @@ class VectorStore:
         store.add_documents(documents)
         print(f"[OK] 已添加 {len(documents)} 条文档到向量库")
 
-    def search(self, query: str, top_k: int = None) -> List[Document]:
+    def search(self, query: str, top_k: int = None,
+               source_type: str = None) -> List[Document]:
         """
         语义相似度检索。
-        返回与 query 最相似的 top_k 条 Document，按相关度降序排列。
+        返回与 query 最相似的 top_k 条 Document。
+        source_type: 可选 "builtin" 或 "imported"，限定来源类型。
         """
         top_k = top_k or Config.TOP_K
         store = self._load()
-        results = store.similarity_search(query, k=top_k)
+        kwargs = {"k": top_k}
+        if source_type:
+            kwargs["filter"] = {"source_type": source_type}
+        results = store.similarity_search(query, **kwargs)
         return results
 
     def search_with_scores(self, query: str, top_k: int = None) -> List[tuple]:

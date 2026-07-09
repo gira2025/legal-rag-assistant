@@ -77,6 +77,14 @@ with st.sidebar:
     st.markdown("---")
     top_k = st.slider("检索法条数", 3, 10, Config.TOP_K, key="top_k_slider")
 
+    source_filter = st.radio(
+        "数据来源筛选",
+        ["全部", "仅内置法律", "仅导入文档"],
+        horizontal=True,
+    )
+    source_type_map = {"全部": None, "仅内置法律": "builtin", "仅导入文档": "imported"}
+    source_type = source_type_map[source_filter]
+
     # ========== 导入文档 ==========
     st.markdown("---")
     st.subheader("📄 导入文档")
@@ -181,7 +189,7 @@ question = st.text_input(
 
 if st.button("🔍 查询", type="primary", disabled=not question):
     with st.spinner("正在检索相关法条..."):
-        result = cached_search(question, top_k)
+        result = get_pipeline().ask(question, top_k=top_k, source_type=source_type)
 
     sources = result["sources"]
     actual_count = len(sources)
