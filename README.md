@@ -155,9 +155,7 @@ legal-rag-assistant/
 ├── .env.example               # 环境变量模板
 ├── CHANGELOG.md               # 版本更新记录
 └── README.md
-├── requirements.txt         # Python 依赖
-├── .env.example             # 环境变量模板
-└── README.md
+
 ```
 
 ---
