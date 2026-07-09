@@ -210,6 +210,7 @@ class LawFetcher:
                     "article": f"第{article_num}条",
                     "source_file": md_file.name,
                     "law_category": self._get_category(md_file),
+                    "source_type": "builtin",
                 },
             ))
 

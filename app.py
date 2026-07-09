@@ -63,7 +63,10 @@ with st.sidebar:
     st.markdown("---")
 
     # 知识库状态
+    import_count = get_store().count_imported()
+    builtin_count = st.session_state.doc_count - import_count
     st.metric("📚 索引法条数", f"{st.session_state.doc_count:,} 条")
+    st.caption(f"  内置法律 {builtin_count:,} 条 | 导入文档 {import_count:,} 条")
     st.metric("🤖 LLM", Config.LLM_MODEL)
     st.metric("🔤 Embedding", Config.EMBEDDING_MODEL)
 
@@ -98,11 +101,12 @@ with st.sidebar:
             try:
                 docs = parse_file(tmp_path)
                 if docs:
-                    # 修正元数据：用原始文件名替代临时文件名
+                    # 修正元数据：标注来源类型，用原始文件名
                     for doc in docs:
                         doc.metadata["source_file"] = original_name
                         doc.metadata["law_name"] = original_name
                         doc.metadata["article"] = ""
+                        doc.metadata["source_type"] = "imported"
 
                     store = get_store()
                     store.add_documents(docs)
@@ -140,8 +144,23 @@ with st.sidebar:
             st.success(f"✅ {msg_text}")
         else:
             st.error(f"❌ {msg_text}")
-        # 显示一次后清除，下次刷新不显示
         st.session_state.import_msg = None
+
+    # 删除已导入文档
+    if import_count > 0:
+        st.markdown("---")
+        with st.expander("🗑️ 管理已导入文档"):
+            st.caption(f"当前有 {import_count} 条导入文档的索引")
+            if st.button("删除所有导入文档", type="secondary"):
+                deleted = get_store().delete_imported()
+                st.session_state.doc_count = cached_count()
+                st.session_state.import_key += 1
+                get_pipeline.clear()
+                st.session_state.import_msg = (
+                    "success",
+                    f"已删除 {deleted} 条导入文档",
+                )
+                st.rerun()
 
 
 # ==================== 主页面 ====================

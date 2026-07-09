@@ -126,6 +126,29 @@ class VectorStore:
         """检查是否已有向量索引"""
         return self.count() > 0
 
+    def delete_imported(self) -> int:
+        """删除所有用户导入的文档（source_type=imported），返回删除数量"""
+        try:
+            store = self._load()
+            coll = store._collection
+            # 先查出要删多少
+            result = coll.get(where={"source_type": "imported"})
+            count = len(result["ids"]) if result["ids"] else 0
+            if count > 0:
+                coll.delete(where={"source_type": "imported"})
+            return count
+        except Exception:
+            return 0
+
+    def count_imported(self) -> int:
+        """返回导入文档数量"""
+        try:
+            store = self._load()
+            result = store._collection.get(where={"source_type": "imported"})
+            return len(result["ids"]) if result["ids"] else 0
+        except Exception:
+            return 0
+
     # ============================================================
     # 内部方法
     # ============================================================
