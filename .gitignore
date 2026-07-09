@@ -43,6 +43,8 @@ secrets/
 data/raw/
 data/processed/
 data/chroma_db/
+data/laws/
+data/custom/
 *.db
 *.sqlite3
 *.log
