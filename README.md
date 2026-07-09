@@ -137,19 +137,24 @@ streamlit run app.py
 
 ```
 legal-rag-assistant/
-├── src/
-│   ├── config.py            # 配置中心（路径、API、模型参数）
-│   ├── law_fetcher.py       # 法律库拉取 + Markdown 解析
-│   ├── document_parser.py   # 用户文档解析（PDF/Word/TXT）
-│   ├── embedder.py          # Embedding 客户端（本地/API 双模式）
-│   ├── vector_store.py      # ChromaDB 向量存储
-│   └── rag_pipeline.py      # RAG 核心管线（检索→生成）
-├── data/
-│   ├── laws/                # 法律库（Git 克隆，不入版本控制）
-│   ├── chroma_db/           # 向量数据库（不入版本控制）
-│   └── custom/              # 用户自定义文档
-├── main.py                  # CLI 入口
-├── app.py                   # Web UI（Streamlit）
+├── src/                       # 源代码
+│   ├── config.py              # 配置中心（路径、API Key、模型参数）
+│   ├── law_fetcher.py         # 法律库拉取解析（2400+ 部 → 85k 条法条）
+│   ├── document_parser.py     # 用户文档解析（支持 PDF/Word/TXT）
+│   ├── embedder.py            # Embedding 客户端（本地 BGE / API 双模式）
+│   ├── vector_store.py        # ChromaDB 向量存储（索引/检索/删除）
+│   └── rag_pipeline.py        # RAG 核心管线（检索 → 生成 → 来源标注）
+├── data/                      # 本地数据（全部被 .gitignore 排除）
+│   ├── laws/                  # 法律 Markdown 文件（GitHub 克隆，不入库）
+│   ├── chroma_db/             # ChromaDB 向量索引持久化文件（不入库）
+│   └── custom/                # 用户自定义文档存放目录（不入库）
+├── tests/                     # 测试用例
+├── main.py                    # CLI 命令行入口
+├── app.py                     # Web UI 入口（Streamlit）
+├── requirements.txt           # Python 依赖
+├── .env.example               # 环境变量模板
+├── CHANGELOG.md               # 版本更新记录
+└── README.md
 ├── requirements.txt         # Python 依赖
 ├── .env.example             # 环境变量模板
 └── README.md
